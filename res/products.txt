@@ -1,0 +1,12 @@
+Coke
+Tea
+Coffee
+Beer
+Cider
+Mineral Water
+Latte
+Orange Juice
+Chocolate
+Lemonade
+Herbal Tea
+W
