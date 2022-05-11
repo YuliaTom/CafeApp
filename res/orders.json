@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "customer_name": "Roy",
+        "customer_address": "12 Dove",
+        "customer_phone": "222222",
+        "courier": "1",
+        "status": "Delivered"
+    },
+    {
+        "id": 2,
+        "customer_name": "Tania",
+        "customer_address": "89 Dilon",
+        "customer_phone": "44777889",
+        "courier": "2",
+        "status": "Delivered"
+    },
+    {
+        "id": 3,
+        "customer_name": "Fsjbv",
+        "customer_address": "Dvdv",
+        "customer_phone": "Vsdvsv",
+        "courier": "2",
+        "status": "Preparing"
+    },
+    {
+        "id": 4,
+        "customer_name": "Dbdtgbg",
+        "customer_address": "Bdgbdt",
+        "customer_phone": "Rdgdrg",
+        "courier": "2",
+        "status": "Preparing"
+    },
+    {
+        "id": 5,
+        "customer_name": "Rvdrv",
+        "customer_address": "Svrdv",
+        "customer_phone": "Vrdv",
+        "courier": "1",
+        "status": "Preparing"
+    }
+]
