@@ -8,7 +8,7 @@ def read_file(file_name) -> list[dict]:
             reader = csv.DictReader(file)
             result = [row for row in reader]
             return result
-    except IOError as e:
+    except IOError:
         return []
 
 

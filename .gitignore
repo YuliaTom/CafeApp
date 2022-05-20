@@ -5,3 +5,6 @@ __pycache__
 mini-project-week-5.md
 test-1.py
 test.ipynb
+.venv
+.env
+*.yml
