@@ -1,4 +1,5 @@
 import os
+from turtle import pos
 import pymysql
 import pandas as pd
 from csv_utils import *
@@ -75,6 +76,17 @@ categories = {
      }
 }
 
+SELECT_ORDER_QUERY = '''SELECT o.id AS order_id, c.customer_name AS customer_name, c.customer_address AS customer_address, 
+c.customer_phone AS customer_phone, cr.courier_name AS courier_name, o.status AS status
+FROM customers c JOIN orders o ON o.customer_id = c.id LEFT JOIN couriers cr ON o.courier_id = cr.id'''
+
+SELECT_ORDER_PRODUCTS_QUERY = '''SELECT o.id AS order_id, p.product_name
+FROM products p
+LEFT JOIN order_items oi
+ON p.id = oi.product_id
+JOIN orders o 
+ON o.id = oi.order_id'''
+
 
 def main_menu():
     clear_console()
@@ -82,6 +94,8 @@ def main_menu():
         print_list(main_menu_options)
         options_input = input("Please enter an option: ")
         if options_input == "0":
+            cursor.close()
+            connection.close()
             print("Exiting program")
             break
         elif options_input == "1":
@@ -194,32 +208,25 @@ def order_menu(category: str):
         if order_opt_input == "0":
             break
         elif order_opt_input == "1":
-            print_table(get_sql_order_list('''SELECT o.id AS order_id, c.customer_name AS customer_name, c.customer_address AS customer_address, 
-c.customer_phone AS customer_phone, cr.courier_name AS courier_name, o.status AS status
-FROM customers c JOIN orders o ON o.customer_id = c.id JOIN couriers cr ON o.courier_id = cr.id''', '''SELECT o.id AS order_id, p.product_name
-FROM products p
-JOIN order_items oi
-ON p.id = oi.product_id
-JOIN orders o 
-ON o.id = oi.order_id'''),
+            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
                         categories[category]["columns"].keys())
             continue_func()
         elif order_opt_input == "2":
-            execute_sql(
-                "INSERT INTO orders (customer_id, courier_id, status) VALUES (%s, %s, %s)", get_user_input_order())
+            get_user_input_order()
             continue_func()
         elif order_opt_input == "3":
-            print_csv_file(category_file)
-            update_status_dict(
-                category_file, f"Enter {category} number : ", "Enter new status option ")
+            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+                        categories[category]["columns"].keys())
+            update_order_status()
             continue_func()
         elif order_opt_input == "4":
             print_csv_file(category_file)
             update_order_dict(category_file, "Enter order number: ")
             continue_func()
         elif order_opt_input == "5":
-            print_csv_file(category_file)
-            delete_dict(category_file, "Enter order number: ")
+            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+                        categories[category]["columns"].keys())
+            delete_sql_row("SELECT * FROM orders", "orders")
             continue_func()
 
 
@@ -231,23 +238,24 @@ def get_sql_list(sql_command: str) -> list:
 
 def get_sql_order_list(sql_command1: str, sql_command2: str) -> list:
     cursor.execute(sql_command1)
-    rows = cursor.fetchall()
+    order_rows = cursor.fetchall()
     cursor.execute(sql_command2)
-    new_rows = cursor.fetchall()
+    product_rows = cursor.fetchall()
     products = dict()
-    for row in new_rows:
-        if row[0] in list(products.keys()):
-            products[row[0]].append(row[1])
+    for product in product_rows:
+        if product[0] in list(products.keys()):
+            products[product[0]].append(product[1])
         else:
-            products[row[0]] = [row[1]]
-    joined_rows = []
-    for row in rows:
-        row = list(row)
+            products[product[0]] = [product[1]]
+    order_rows = [list(order) for order in order_rows]
+    for order in order_rows:
+        order.append([])
+    for order in order_rows:
         for k, v in products.items():
-            if k == row[0]:
-                row.append(v)
-                joined_rows.append(row)
-    return joined_rows
+            if k == order[0]:
+                order[-1].extend(v)
+
+    return order_rows
 
 
 def print_table(rows: list, columns: list):
@@ -278,37 +286,65 @@ def get_user_input(columns: dict) -> list:
     return val
 
 
-def get_user_input_order():
-    customer_rows = get_sql_list("SELECT * FROM customers")
-    print_table(customer_rows, categories["customers"]["columns"].keys())
+def get_idx_input(rows: list, input_text: str):
     while True:
-        cust_position = input_int("Enter customer number: ") - 1
-        if cust_position in range(len(customer_rows)):
-            cust_id = customer_rows[cust_position][0]
-            break
-        else:
-            print_invalid()
-    courier_rows = get_sql_list("SELECT * FROM couriers")
-    print_table(courier_rows, categories["couriers"]["columns"].keys())
-    while True:
-        cour_position = input_int("Enter courier number: ") - 1
-        if cour_position in range(len(courier_rows)):
-            cour_id = courier_rows[cour_position][0]
-            break
-        else:
-            print_invalid()
-    status = status_list[0]
-    product_rows = get_sql_list("SELECT * FROM products")
-    print_table(product_rows, categories["products"]["columns"].keys())
-    prod_ids = []
-    while True:
-        prod_position = input_int("Enter product number: ") - 1
-        if cust_position in range(len(product_rows)):
-            prod_ids(product_rows[prod_position][0])
+        position = input_int(input_text) - 1
+        if position in range(len(rows)):
+            id = rows[position][0]
+            return id
         else:
             print_invalid()
 
-    return [cust_id, cour_id, status]
+
+def get_user_input_order():
+    customer_rows = get_sql_list("SELECT * FROM customers")
+    print_table(customer_rows, categories["customers"]["columns"].keys())
+    cust_id = get_idx_input(customer_rows, "Enter customer number: ")
+    courier_rows = get_sql_list("SELECT * FROM couriers")
+    print_table(courier_rows, categories["couriers"]["columns"].keys())
+    cour_id = get_idx_input(courier_rows, "Enter courier number: ")
+    status = status_list[0]
+    execute_sql_no_commit(
+        "INSERT INTO orders (customer_id, courier_id, status) VALUES (%s, %s, %s)", [cust_id, cour_id, status])
+    last_row_id = cursor.lastrowid
+    product_rows = get_sql_list("SELECT * FROM products")
+    print_table(product_rows, categories["products"]["columns"].keys())
+    is_product_added = False
+    while True:
+        prod_position = input_int("Enter product number or 0 to exit: ") - 1
+        if prod_position < 0:
+            break
+        elif prod_position in range(len(product_rows)):
+            prod_id = product_rows[prod_position][0]
+            execute_sql_no_commit("INSERT INTO order_items (order_id, product_id) VALUES (%s, %s)", [
+                last_row_id, prod_id])
+            is_product_added = True
+            print("Added. Anything else?")
+        else:
+            print_invalid()
+    if is_product_added:
+        connection.commit()
+    else:
+        connection.rollback()
+
+
+def update_order_status():
+    position = input_int("Enter order number: ") - 1
+    order_rows = get_sql_list("SELECT * FROM orders")
+    if position in range(len(order_rows)):
+        id = order_rows[position][0]
+        print_list(status_list)
+        while True:
+            status_idx = input_int("Enter new status number: ")
+            if status_idx in range(len(status_list)):
+                execute_sql(
+                    f"UPDATE orders SET status = '{status_list[status_idx]}' WHERE id = {id}", [])
+                print("Updated!")
+                break
+            else:
+                print_invalid()
+    else:
+        print_invalid()
 
 
 def sort_phone(phone_num):
@@ -322,6 +358,13 @@ def execute_sql(sql_command: str, values: list):
     try:
         cursor.execute(sql_command, values)
         connection.commit()
+    except pymysql.err.IntegrityError:
+        print_duplicate()
+
+
+def execute_sql_no_commit(sql_command: str, values: list):
+    try:
+        cursor.execute(sql_command, values)
     except pymysql.err.IntegrityError:
         print_duplicate()
 
