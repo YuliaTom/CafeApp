@@ -1,0 +1,7 @@
+id,Customer name,Customer address,Customer phone,Courier name,Status,Items
+9,John Smith,"11 Downing Str, London",+44 78112 34587,Harry,Delivered,"['Latte', 'Latte']"
+10,Wednesday Adams,"1 First Str, Somewhereelseshire",+44 74221 72653,Barry,Preparing,"['Flat White', 'Latte']"
+12,Sam Johnson,"90 Over The Hill, Somewhereshire",+44 71223 46573,Barry,Out for delivery,['Tea']
+16,John Smith,"11 Downing Str, London",+44 78112 34587,Harry,Preparing,['Tea']
+17,Sam Johnson,"90 Over The Hill, Somewhereshire",+44 71223 46573,Larry,Delivered,"['Flat White', 'Tea']"
+18,Wednesday Adams,"1 First Str, Somewhereelseshire",+44 74221 72653,Larry,Preparing,"['Flat White', 'Latte']"

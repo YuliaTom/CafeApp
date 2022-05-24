@@ -1,7 +1,7 @@
 import os
-from turtle import pos
 import pymysql
 import pandas as pd
+import csv
 from csv_utils import *
 from input_utils import *
 from dotenv import load_dotenv
@@ -32,7 +32,8 @@ categories = {
                      "View product list",
                      "Create a new product",
                      "Update an existing product",
-                     "Delete product"],
+                     "Delete product",
+                     "Export data"],
          "columns": {"id": ("int", "id"),
                      "Product name": ("str", "product_name"),
                      "Price": ("float", "product_price"),
@@ -43,7 +44,8 @@ categories = {
                  "View courier list",
                  "Create a new courier",
                  "Update an existing courier",
-                 "Delete courier"],
+                 "Delete courier", 
+                 "Export data"],
         "columns": {"id": ("int", "id"),
                     "Courier name": ("str", "courier_name"),
                     "Phone": ("str", "courier_phone")}
@@ -54,7 +56,8 @@ categories = {
                  "Create a new order",
                  "Update order status",
                  "Update an existing order",
-                 "Delete order"],
+                 "Delete order",
+                 "Export data"],
         "columns": {"id": ("int", "id"),
                     "Customer name": ("str", "customer_name"),
                     "Customer address": ("str", "customer_address"),
@@ -68,7 +71,8 @@ categories = {
                  "View customer list",
                  "Create a new customer",
                  "Update an existing customer",
-                 "Delete customer"],
+                 "Delete customer",
+                 "Export data"],
         "columns": {"id": ("int", "id"),
                     "Customer name": ("str", "customer_name"),
                     "Address": ("str", "customer_address"),
@@ -139,6 +143,9 @@ def product_menu(category: str):
                         categories[category]["columns"].keys())
             delete_sql_row("SELECT * FROM products", "products")
             continue_func()
+        elif submenu_opt_input == "5":
+            export_table(get_sql_list("SELECT * FROM products"),
+                        categories[category]["columns"].keys())
 
 
 def courier_menu(category: str):
@@ -168,6 +175,9 @@ def courier_menu(category: str):
                         categories[category]["columns"].keys())
             delete_sql_row("SELECT * FROM couriers", "couriers")
             continue_func()
+        elif submenu_opt_input == "5":
+            export_table(get_sql_list("SELECT * FROM couriers"),
+                        categories[category]["columns"].keys())
 
 
 def customer_menu(category: str):
@@ -197,6 +207,9 @@ def customer_menu(category: str):
                         categories[category]["columns"].keys())
             delete_sql_row("SELECT * FROM customers", "customers")
             continue_func()
+        elif submenu_opt_input == "5":
+            export_table(get_sql_list("SELECT * FROM customers"),
+                        categories[category]["columns"].keys())
 
 
 def order_menu(category: str):
@@ -220,20 +233,40 @@ def order_menu(category: str):
             update_order_status()
             continue_func()
         elif order_opt_input == "4":
-            print_csv_file(category_file)
-            update_order_dict(category_file, "Enter order number: ")
+            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+                        categories[category]["columns"].keys())
+            update_order("SELECT * FROM orders", "SELECT * FROM customers", "SELECT * FROM couriers", "SELECT * FROM products")
             continue_func()
         elif order_opt_input == "5":
             print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
                         categories[category]["columns"].keys())
             delete_sql_row("SELECT * FROM orders", "orders")
             continue_func()
+        elif order_opt_input == "6":
+            export_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+                        categories[category]["columns"].keys())
 
 
 def get_sql_list(sql_command: str) -> list:
     cursor.execute(sql_command)
     rows = cursor.fetchall()
     return rows
+
+
+def export_table(rows: list, columns: list):
+    file_name = input_str("Enter file name: ")
+    with open(f"res/{file_name}.csv", 'w') as file:
+        writer = csv.writer(file)
+        writer.writerow(columns)
+        writer.writerows(rows)
+
+
+
+def print_sql_order_item(id: int):
+    order_rows = get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY)
+    for row in order_rows:
+        if row[0] == id:
+            print_table([row], categories["orders"]["columns"].keys())
 
 
 def get_sql_order_list(sql_command1: str, sql_command2: str) -> list:
@@ -254,7 +287,6 @@ def get_sql_order_list(sql_command1: str, sql_command2: str) -> list:
         for k, v in products.items():
             if k == order[0]:
                 order[-1].extend(v)
-
     return order_rows
 
 
@@ -296,6 +328,14 @@ def get_idx_input(rows: list, input_text: str):
             print_invalid()
 
 
+def stock_decrease(product_id: int):
+    product_row = get_sql_list(f"SELECT product_qty FROM products WHERE id = {product_id}")
+    execute_sql_no_commit("UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]-1, product_id))
+
+def stock_increase(product_id: int):
+    product_row = get_sql_list(f"SELECT product_qty FROM products WHERE id = {product_id}")
+    execute_sql_no_commit("UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]+1, product_id))
+
 def get_user_input_order():
     customer_rows = get_sql_list("SELECT * FROM customers")
     print_table(customer_rows, categories["customers"]["columns"].keys())
@@ -318,6 +358,7 @@ def get_user_input_order():
             prod_id = product_rows[prod_position][0]
             execute_sql_no_commit("INSERT INTO order_items (order_id, product_id) VALUES (%s, %s)", [
                 last_row_id, prod_id])
+            stock_decrease(prod_id)
             is_product_added = True
             print("Added. Anything else?")
         else:
@@ -345,6 +386,72 @@ def update_order_status():
                 print_invalid()
     else:
         print_invalid()
+
+
+def get_update_input(rows: list, category: str, column: str, order_id: int):
+    while True:
+        position = input(f"\nEnter new {category} number or press ENTER to skip: ")
+        if position == "":
+            break
+        try: 
+            position = int(position) - 1
+            if position in range(len(rows)):
+                new_id = rows[position][0]
+                execute_sql(f"UPDATE orders SET {column} = %s WHERE id = %s ", (new_id, order_id))
+                print("Updated!")
+                break
+        except Exception as e:
+            print(f"An error occured: {e}")
+            print_invalid()
+
+
+
+def update_order(sql_command_ord, sql_command_cust, sql_command_cour, sql_command_prod):
+    order_rows = get_sql_list(sql_command_ord)
+    order_id = get_idx_input(order_rows, "\nEnter order number: ")
+    clear_console()
+    print_sql_order_item(order_id)
+    print()
+    customer_rows = get_sql_list(sql_command_cust)
+    print_table(get_sql_list("SELECT * FROM customers"), categories["customers"]["columns"].keys())
+    get_update_input(customer_rows, "customer", "customer_id", order_id)
+    courier_rows = get_sql_list(sql_command_cour)
+    print_table(get_sql_list("SELECT * FROM couriers"), categories["couriers"]["columns"].keys())
+    get_update_input(courier_rows, "courier", "courier_id", order_id)
+    clear_console()
+    print_sql_order_item(order_id)
+    choice = input("\nDo you want to replace products for this order? (y/n): ").lower()
+    if choice == "n":
+        return
+    elif choice == "y":
+        prod_ids = [id for id in get_sql_list(f"SELECT product_id FROM order_items WHERE order_id = {order_id}")]
+        for id in prod_ids:
+                stock_increase(id[0]) 
+        execute_sql_no_commit(f"DELETE FROM order_items WHERE order_id = {order_id}", [])
+        product_rows = get_sql_list(sql_command_prod)
+        print_table(get_sql_list("SELECT * FROM products"), categories["products"]["columns"].keys())
+        while True:
+            prod_position = input_int("Enter product number or 0 to exit: ") - 1
+            if prod_position < 0:
+                break
+            elif prod_position in range(len(product_rows)):
+                prod_id = product_rows[prod_position][0]
+                execute_sql_no_commit("INSERT INTO order_items (order_id, product_id) VALUES (%s, %s)", [
+                    order_id, prod_id])
+                is_product_added = True
+                stock_decrease(prod_id)
+                print("Added. Anything else?")
+            else:
+                print_invalid()
+            if is_product_added:
+                connection.commit()
+            else:
+                connection.rollback()
+    else:
+        print_invalid()
+    
+    
+
 
 
 def sort_phone(phone_num):
