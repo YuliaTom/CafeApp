@@ -33,7 +33,8 @@ categories = {
                      "Create a new product",
                      "Update an existing product",
                      "Delete product",
-                     "Export data"],
+                     "Export data",
+                     "Import data"],
          "columns": {"id": ("int", "id"),
                      "Product name": ("str", "product_name"),
                      "Price": ("float", "product_price"),
@@ -44,7 +45,7 @@ categories = {
                  "View courier list",
                  "Create a new courier",
                  "Update an existing courier",
-                 "Delete courier", 
+                 "Delete courier",
                  "Export data"],
         "columns": {"id": ("int", "id"),
                     "Courier name": ("str", "courier_name"),
@@ -64,6 +65,7 @@ categories = {
                     "Customer phone": ("str", "customer_phone"),
                     "Courier name": ("str", "courier_name"),
                     "Status": ("str", "status"),
+                    "Total": ("float", "total"),
                     "Items": ("str", "items")}
      },
     "customers":
@@ -72,7 +74,8 @@ categories = {
                  "Create a new customer",
                  "Update an existing customer",
                  "Delete customer",
-                 "Export data"],
+                 "Export data",
+                 "Import data"],
         "columns": {"id": ("int", "id"),
                     "Customer name": ("str", "customer_name"),
                     "Address": ("str", "customer_address"),
@@ -80,23 +83,44 @@ categories = {
      }
 }
 
-SELECT_ORDER_QUERY = '''SELECT o.id AS order_id, c.customer_name AS customer_name, c.customer_address AS customer_address, 
-c.customer_phone AS customer_phone, cr.courier_name AS courier_name, o.status AS status
-FROM customers c JOIN orders o ON o.customer_id = c.id LEFT JOIN couriers cr ON o.courier_id = cr.id'''
+SELECT_ORDER_QUERY = '''SELECT o.id AS order_id, c.customer_name AS customer_name, c.customer_address AS customer_address,
+c.customer_phone AS customer_phone, cr.courier_name AS courier_name, o.status AS status, SUM(p.product_price) AS total
+FROM customers c
+JOIN orders o
+ON o.customer_id = c.id
+LEFT JOIN couriers cr
+ON o.courier_id = cr.id
+LEFT JOIN order_items oi
+ON oi.Order_id = o.id
+LEFT JOIN products p
+ON p.id = oi.product_id
+GROUP BY o.id'''
 
-SELECT_ORDER_PRODUCTS_QUERY = '''SELECT o.id AS order_id, p.product_name
+SELECT_ORDER_PRODUCTS_QUERY = '''SELECT o.id AS order_id, p.product_name, p.product_price
 FROM products p
 LEFT JOIN order_items oi
 ON p.id = oi.product_id
 JOIN orders o 
 ON o.id = oi.order_id'''
 
+SELECT_ALL_PRODUCTS = "SELECT * FROM products"
+SELECT_ALL_COURIERS = "SELECT * FROM couriers"
+SELECT_ALL_CUSTOMERS = "SELECT * FROM customers"
+SELECT_ALL_ORDERS = "SELECT * FROM orders"
+
+INSERT_PRODUCT = "INSERT INTO products (product_name, product_price, product_qty) VALUES (%s, %s, %s)"
+INSERT_COURIER = "INSERT INTO couriers (courier_name, courier_phone) VALUES (%s, %s)"
+INSERT_CUSTOMER = "INSERT INTO customers (customer_name, customer_address, customer_phone) VALUES (%s, %s, %s)"
+INSERT_ORDER = "INSERT INTO orders (customer_id, courier_id, status) VALUES (%s, %s, %s)"
+
+PLEASE_ENTER_AN_OPTION = "Please enter an option: "
+
 
 def main_menu():
     clear_console()
     while True:
         print_list(main_menu_options)
-        options_input = input("Please enter an option: ")
+        options_input = input(PLEASE_ENTER_AN_OPTION)
         if options_input == "0":
             cursor.close()
             connection.close()
@@ -120,131 +144,150 @@ def product_menu(category: str):
     while True:
         clear_console()
         print_list(categories[category]["options"])
-        submenu_opt_input = input("Please enter an option: ")
+        submenu_opt_input = input(PLEASE_ENTER_AN_OPTION)
         clear_console()
         if submenu_opt_input == "0":
             break
         elif submenu_opt_input == "1":
-            print_table(get_sql_list("SELECT * FROM products"),
+            print_table(get_sql_list(SELECT_ALL_PRODUCTS),
                         categories[category]["columns"].keys())
             continue_func()
         elif submenu_opt_input == "2":
             execute_sql(
-                'INSERT INTO products (product_name, product_price, product_qty) VALUES (%s, %s, %s)', get_user_input(categories[category]["columns"]))
+                INSERT_PRODUCT, get_user_input(categories[category]["columns"]))
             continue_func()
         elif submenu_opt_input == "3":
-            print_table(get_sql_list("SELECT * FROM products"),
+            print_table(get_sql_list(SELECT_ALL_PRODUCTS),
                         categories[category]["columns"].keys())
-            update_sql_row("SELECT * FROM products",
+            update_sql_row(SELECT_ALL_PRODUCTS,
                            categories[category]["columns"], "products")
             continue_func()
         elif submenu_opt_input == "4":
-            print_table(get_sql_list("SELECT * FROM products"),
+            print_table(get_sql_list(SELECT_ALL_PRODUCTS),
                         categories[category]["columns"].keys())
-            delete_sql_row("SELECT * FROM products", "products")
+            delete_sql_row(SELECT_ALL_PRODUCTS, "products")
             continue_func()
         elif submenu_opt_input == "5":
-            export_table(get_sql_list("SELECT * FROM products"),
+            export_table(get_sql_list(SELECT_ALL_PRODUCTS),
+                         categories[category]["columns"].keys())
+        elif submenu_opt_input == "6":
+            import_table(
+                INSERT_PRODUCT, "res/products_upload.csv")
+            print_table(get_sql_list(SELECT_ALL_PRODUCTS),
                         categories[category]["columns"].keys())
+            continue_func()
 
 
 def courier_menu(category: str):
     while True:
         clear_console()
         print_list(categories[category]["options"])
-        submenu_opt_input = input("Please enter an option: ")
+        submenu_opt_input = input(PLEASE_ENTER_AN_OPTION)
         clear_console()
         if submenu_opt_input == "0":
             break
         elif submenu_opt_input == "1":
-            print_table(get_sql_list("SELECT * FROM couriers"),
+            print_table(get_sql_list(SELECT_ALL_COURIERS),
                         categories[category]["columns"].keys())
             continue_func()
         elif submenu_opt_input == "2":
             execute_sql(
-                'INSERT INTO couriers (courier_name, courier_phone) VALUES (%s, %s)', get_user_input(categories[category]["columns"]))
+                INSERT_COURIER, get_user_input(categories[category]["columns"]))
             continue_func()
         elif submenu_opt_input == "3":
-            print_table(get_sql_list("SELECT * FROM couriers"),
+            print_table(get_sql_list(SELECT_ALL_COURIERS),
                         categories[category]["columns"].keys())
-            update_sql_row("SELECT * FROM couriers",
+            update_sql_row(SELECT_ALL_COURIERS,
                            categories[category]["columns"], "couriers")
             continue_func()
         elif submenu_opt_input == "4":
-            print_table(get_sql_list("SELECT * FROM couriers"),
+            print_table(get_sql_list(SELECT_ALL_COURIERS),
                         categories[category]["columns"].keys())
-            delete_sql_row("SELECT * FROM couriers", "couriers")
+            delete_sql_row(SELECT_ALL_COURIERS, "couriers")
             continue_func()
         elif submenu_opt_input == "5":
-            export_table(get_sql_list("SELECT * FROM couriers"),
+            export_table(get_sql_list(SELECT_ALL_COURIERS),
+                         categories[category]["columns"].keys())
+        elif submenu_opt_input == "6":
+            import_table(
+                INSERT_COURIER, "res/couriers_upload.csv")
+            print_table(get_sql_list(SELECT_ALL_COURIERS),
                         categories[category]["columns"].keys())
+            continue_func()
 
 
 def customer_menu(category: str):
     while True:
         clear_console()
         print_list(categories[category]["options"])
-        submenu_opt_input = input("Please enter an option: ")
+        submenu_opt_input = input(PLEASE_ENTER_AN_OPTION)
         clear_console()
         if submenu_opt_input == "0":
             break
         elif submenu_opt_input == "1":
-            print_table(get_sql_list("SELECT * FROM customers"),
+            print_table(get_sql_list(SELECT_ALL_CUSTOMERS),
                         categories[category]["columns"].keys())
             continue_func()
         elif submenu_opt_input == "2":
             execute_sql(
-                'INSERT INTO customers (customer_name, customer_address, customer_phone) VALUES (%s, %s, %s)', get_user_input(categories[category]["columns"]))
+                INSERT_CUSTOMER, get_user_input(categories[category]["columns"]))
             continue_func()
         elif submenu_opt_input == "3":
-            print_table(get_sql_list("SELECT * FROM customers"),
+            print_table(get_sql_list(SELECT_ALL_CUSTOMERS),
                         categories[category]["columns"].keys())
-            update_sql_row("SELECT * FROM customers",
+            update_sql_row(SELECT_ALL_CUSTOMERS,
                            categories[category]["columns"], "customers")
             continue_func()
         elif submenu_opt_input == "4":
-            print_table(get_sql_list("SELECT * FROM customers"),
+            print_table(get_sql_list(SELECT_ALL_CUSTOMERS),
                         categories[category]["columns"].keys())
-            delete_sql_row("SELECT * FROM customers", "customers")
+            delete_sql_row(SELECT_ALL_CUSTOMERS, "customers")
             continue_func()
         elif submenu_opt_input == "5":
-            export_table(get_sql_list("SELECT * FROM customers"),
+            export_table(get_sql_list(SELECT_ALL_CUSTOMERS),
+                         categories[category]["columns"].keys())
+        elif submenu_opt_input == "6":
+            import_table(
+                INSERT_CUSTOMER, "res/customers_upload.csv")
+            print_table(get_sql_list(SELECT_ALL_CUSTOMERS),
                         categories[category]["columns"].keys())
+            continue_func()
 
 
 def order_menu(category: str):
     while True:
         clear_console()
         print_list(categories[category]["options"])
-        order_opt_input = input("Please enter an option: ")
+        order_opt_input = input(PLEASE_ENTER_AN_OPTION)
         clear_console()
         if order_opt_input == "0":
             break
         elif order_opt_input == "1":
-            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+            print_table(get_sql_order_list(),
                         categories[category]["columns"].keys())
             continue_func()
         elif order_opt_input == "2":
             get_user_input_order()
             continue_func()
         elif order_opt_input == "3":
-            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+            print_table(get_sql_order_list(),
                         categories[category]["columns"].keys())
             update_order_status()
             continue_func()
         elif order_opt_input == "4":
-            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+            print_table(get_sql_order_list(),
                         categories[category]["columns"].keys())
-            update_order("SELECT * FROM orders", "SELECT * FROM customers", "SELECT * FROM couriers", "SELECT * FROM products")
+            update_order(SELECT_ALL_ORDERS, SELECT_ALL_CUSTOMERS,
+                         SELECT_ALL_COURIERS, SELECT_ALL_PRODUCTS)
             continue_func()
         elif order_opt_input == "5":
-            print_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
+            print_table(get_sql_order_list(),
                         categories[category]["columns"].keys())
-            delete_sql_row("SELECT * FROM orders", "orders")
+            delete_sql_row(SELECT_ALL_ORDERS, "orders")
             continue_func()
         elif order_opt_input == "6":
-            export_table(get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY),
-                        categories[category]["columns"].keys())
+            export_table(get_sql_order_list(),
+                         categories[category]["columns"].keys())
 
 
 def get_sql_list(sql_command: str) -> list:
@@ -261,18 +304,25 @@ def export_table(rows: list, columns: list):
         writer.writerows(rows)
 
 
+def import_table(sql_command: str, file_name):
+    with open(file_name, 'r') as file:
+        reader = csv.reader(file)
+        next(reader)
+        for row in reader:
+            execute_sql(sql_command, row)
 
-def print_sql_order_item(id: int):
-    order_rows = get_sql_order_list(SELECT_ORDER_QUERY, SELECT_ORDER_PRODUCTS_QUERY)
+
+def print_sql_order_item(order_id: int):
+    order_rows = get_sql_order_list()
     for row in order_rows:
-        if row[0] == id:
+        if row[0] == order_id:
             print_table([row], categories["orders"]["columns"].keys())
 
 
-def get_sql_order_list(sql_command1: str, sql_command2: str) -> list:
-    cursor.execute(sql_command1)
+def get_sql_order_list() -> list:
+    cursor.execute(SELECT_ORDER_QUERY)
     order_rows = cursor.fetchall()
-    cursor.execute(sql_command2)
+    cursor.execute(SELECT_ORDER_PRODUCTS_QUERY)
     product_rows = cursor.fetchall()
     products = dict()
     for product in product_rows:
@@ -322,33 +372,42 @@ def get_idx_input(rows: list, input_text: str):
     while True:
         position = input_int(input_text) - 1
         if position in range(len(rows)):
-            id = rows[position][0]
-            return id
+            return rows[position][0]
         else:
             print_invalid()
 
 
 def stock_decrease(product_id: int):
-    product_row = get_sql_list(f"SELECT product_qty FROM products WHERE id = {product_id}")
-    execute_sql_no_commit("UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]-1, product_id))
+    product_row = get_sql_list(
+        f"SELECT product_qty FROM products WHERE id = {product_id}")
+    execute_sql_no_commit(
+        "UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]-1, product_id))
+
 
 def stock_increase(product_id: int):
-    product_row = get_sql_list(f"SELECT product_qty FROM products WHERE id = {product_id}")
-    execute_sql_no_commit("UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]+1, product_id))
+    product_row = get_sql_list(
+        f"SELECT product_qty FROM products WHERE id = {product_id}")
+    execute_sql_no_commit(
+        "UPDATE products SET product_qty = %s WHERE id = %s", (product_row[0][0]+1, product_id))
+
 
 def get_user_input_order():
-    customer_rows = get_sql_list("SELECT * FROM customers")
+    customer_rows = get_sql_list(SELECT_ALL_CUSTOMERS)
     print_table(customer_rows, categories["customers"]["columns"].keys())
     cust_id = get_idx_input(customer_rows, "Enter customer number: ")
-    courier_rows = get_sql_list("SELECT * FROM couriers")
+
+    courier_rows = get_sql_list(SELECT_ALL_COURIERS)
     print_table(courier_rows, categories["couriers"]["columns"].keys())
     cour_id = get_idx_input(courier_rows, "Enter courier number: ")
+
     status = status_list[0]
     execute_sql_no_commit(
-        "INSERT INTO orders (customer_id, courier_id, status) VALUES (%s, %s, %s)", [cust_id, cour_id, status])
+        INSERT_ORDER, [cust_id, cour_id, status])
     last_row_id = cursor.lastrowid
-    product_rows = get_sql_list("SELECT * FROM products")
+
+    product_rows = get_sql_list(SELECT_ALL_PRODUCTS)
     print_table(product_rows, categories["products"]["columns"].keys())
+
     is_product_added = False
     while True:
         prod_position = input_int("Enter product number or 0 to exit: ") - 1
@@ -371,15 +430,15 @@ def get_user_input_order():
 
 def update_order_status():
     position = input_int("Enter order number: ") - 1
-    order_rows = get_sql_list("SELECT * FROM orders")
+    order_rows = get_sql_list(SELECT_ALL_ORDERS)
     if position in range(len(order_rows)):
-        id = order_rows[position][0]
+        oder_id = order_rows[position][0]
         print_list(status_list)
         while True:
             status_idx = input_int("Enter new status number: ")
             if status_idx in range(len(status_list)):
                 execute_sql(
-                    f"UPDATE orders SET status = '{status_list[status_idx]}' WHERE id = {id}", [])
+                    f"UPDATE orders SET status = '{status_list[status_idx]}' WHERE id = {oder_id}", [])
                 print("Updated!")
                 break
             else:
@@ -390,20 +449,21 @@ def update_order_status():
 
 def get_update_input(rows: list, category: str, column: str, order_id: int):
     while True:
-        position = input(f"\nEnter new {category} number or press ENTER to skip: ")
+        position = input(
+            f"\nEnter new {category} number or press ENTER to skip: ")
         if position == "":
             break
-        try: 
+        try:
             position = int(position) - 1
             if position in range(len(rows)):
                 new_id = rows[position][0]
-                execute_sql(f"UPDATE orders SET {column} = %s WHERE id = %s ", (new_id, order_id))
+                execute_sql(
+                    f"UPDATE orders SET {column} = %s WHERE id = %s ", [new_id, order_id])
                 print("Updated!")
                 break
         except Exception as e:
             print(f"An error occured: {e}")
             print_invalid()
-
 
 
 def update_order(sql_command_ord, sql_command_cust, sql_command_cour, sql_command_prod):
@@ -413,25 +473,32 @@ def update_order(sql_command_ord, sql_command_cust, sql_command_cour, sql_comman
     print_sql_order_item(order_id)
     print()
     customer_rows = get_sql_list(sql_command_cust)
-    print_table(get_sql_list("SELECT * FROM customers"), categories["customers"]["columns"].keys())
+    print_table(get_sql_list(SELECT_ALL_CUSTOMERS),
+                categories["customers"]["columns"].keys())
     get_update_input(customer_rows, "customer", "customer_id", order_id)
     courier_rows = get_sql_list(sql_command_cour)
-    print_table(get_sql_list("SELECT * FROM couriers"), categories["couriers"]["columns"].keys())
+    print_table(get_sql_list(SELECT_ALL_COURIERS),
+                categories["couriers"]["columns"].keys())
     get_update_input(courier_rows, "courier", "courier_id", order_id)
     clear_console()
     print_sql_order_item(order_id)
-    choice = input("\nDo you want to replace products for this order? (y/n): ").lower()
+    choice = input(
+        "\nDo you want to replace products for this order? (y/n): ").lower()
     if choice == "n":
         return
     elif choice == "y":
-        prod_ids = [id for id in get_sql_list(f"SELECT product_id FROM order_items WHERE order_id = {order_id}")]
+        prod_ids = [id for id in get_sql_list(
+            f"SELECT product_id FROM order_items WHERE order_id = {order_id}")]
         for id in prod_ids:
-                stock_increase(id[0]) 
-        execute_sql_no_commit(f"DELETE FROM order_items WHERE order_id = {order_id}", [])
+            stock_increase(id[0])
+        execute_sql_no_commit(
+            f"DELETE FROM order_items WHERE order_id = {order_id}", [])
         product_rows = get_sql_list(sql_command_prod)
-        print_table(get_sql_list("SELECT * FROM products"), categories["products"]["columns"].keys())
+        print_table(get_sql_list(SELECT_ALL_PRODUCTS),
+                    categories["products"]["columns"].keys())
         while True:
-            prod_position = input_int("Enter product number or 0 to exit: ") - 1
+            prod_position = input_int(
+                "Enter product number or 0 to exit: ") - 1
             if prod_position < 0:
                 break
             elif prod_position in range(len(product_rows)):
@@ -449,9 +516,6 @@ def update_order(sql_command_ord, sql_command_cust, sql_command_cour, sql_comman
                 connection.rollback()
     else:
         print_invalid()
-    
-    
-
 
 
 def sort_phone(phone_num):
@@ -524,145 +588,6 @@ def delete_sql_row(sql_command: str, table_name: str):
             print_invalid()
 
 
-def is_duplicate(item_list: list[dict], item: str) -> bool:
-    for dict in item_list:
-        if dict["name"] == item:
-            return True
-
-
-def append_to_csv(file_name: str, item_list: list[str]) -> bool:
-    try:
-        with open(file_name, "a") as file:
-            writer = csv.writer(file)
-            writer.writerow(item_list)
-            return True
-    except:
-        file_not_found()
-        return False
-
-
-def add_new_row_to_csv_float(file_name: str, input_text1: str, input_text2: str):
-    new_val1 = input_str(input_text1).title()
-    if is_duplicate(read_file(file_name), new_val1):
-        print("Already exists.")
-        return
-    new_val2 = input_float(input_text2)
-    is_added = append_to_csv(
-        file_name, [new_val1, new_val2])
-    if is_added:
-        print("Added!")
-
-
-def add_new_row_to_csv_str(file_name: str, input_text1: str, input_text2: str):
-    new_val1 = input_str(input_text1).title()
-    if is_duplicate(read_file(file_name), new_val1):
-        print("Already exists.")
-        return
-    new_val2 = input_str(input_text2)
-    is_added = append_to_csv(
-        file_name, [new_val1, new_val2])
-    if is_added:
-        print("Added!")
-
-
-def create_order_dict() -> dict:
-    new_order_dict = dict()
-    new_order_dict["customer name"] = input("Enter customer name: ").title()
-    new_order_dict["customer address"] = input(
-        "Enter customer address: ").title()
-    new_order_dict["customer phone"] = input("Enter customer phone: ").title()
-    print_csv_file(categories["product"]["path"])
-    new_order_dict["items"] = input(
-        "Enter products for this order separated by coma: ")
-    print_csv_file(categories["courier"]["path"])
-    new_order_dict["courier"] = input("Enter courier number: ")
-    new_order_dict["status"] = status_list[0]
-    return new_order_dict
-
-
-def update_status_dict(file_name: str, input_text1: str, input_text2: str):
-    dict_list = read_file(file_name)
-    idx = input_int(input_text1) - 1
-    if idx in range(len(dict_list)):
-        print_dict(dict_list[idx])
-        print_list(status_list)
-        status_idx = input_int(input_text2)
-        if status_idx in range(len(status_list)):
-            dict_list[idx]["status"] = status_list[status_idx]
-            write_to_csv(file_name, dict_list)
-    else:
-        print_invalid()
-        return
-
-
-def update_order_dict(file_name: str, input_text: str) -> dict:
-    dict_list = read_file(file_name)
-    idx = input_int(input_text) - 1
-    if idx in range(len(dict_list)):
-        for key in dict_list[idx].keys():
-            if key == "items":
-                print_csv_file(categories["product"]["path"])
-            elif key == "courier":
-                print_csv_file(categories["courier"]["path"])
-            elif key == "status":
-                print_list(status_list)
-                try:
-                    new_value = int(
-                        input(f"Enter new {key} number or press ENTER to skip: "))
-                    if new_value == '':
-                        continue
-                    elif new_value > 0:
-                        dict_list[idx][key] = status_list[new_value]
-                    continue
-                except ValueError:
-                    print_invalid()
-                    continue
-            new_value = input(
-                f"Enter new {key} or press ENTER to skip: ").title()
-            if new_value == '':
-                continue
-            else:
-                dict_list[idx][key] = new_value
-    else:
-        print_invalid()
-        return
-    write_to_csv(file_name, dict_list)
-
-
-def update_csv_file(file_name: str, input_text: str):
-    position = input_int(input_text) - 1
-    dict_list = read_file(file_name)
-    if position < 0:
-        return
-    elif position < len(dict_list) and position >= 0:
-        for col in dict_list[position].keys():
-            new_col_input = input(
-                f"Enter new {col} or press ENTER to skip: ").title()
-            if new_col_input == "":
-                continue
-            if col == "name" and is_duplicate(dict_list, new_col_input):
-                print("Already exists.")
-                return
-            else:
-                dict_list[position][col] = new_col_input
-                write_to_csv(file_name, dict_list)
-        print("Updated!")
-    else:
-        print_invalid()
-
-
-def delete_dict(file_name: str, text: str):
-    dict_list = read_file(file_name)
-    idx = input_int(text) - 1
-    if idx in range(len(dict_list)):
-        dict_list.pop(idx)
-    else:
-        print_invalid()
-        return
-    write_to_csv(file_name, dict_list)
-    print("Deleted.")
-
-
 def clear_console():
     os.system("clear")
 
@@ -679,23 +604,10 @@ def print_duplicate():
     print("Already exists! Data has not been updated.")
 
 
-def file_not_found():
-    print("File has not been found.")
-
-
 def print_list(item_list: list):
     for index, item in enumerate(item_list):
         print(index, item)
     print("")
-
-
-def print_dict(dict: dict):
-    for k, v in dict.items():
-        if k == "id":
-            print(v)
-        else:
-            print(f'{k}: {v}')
-    print()
 
 
 if __name__ == '__main__':
