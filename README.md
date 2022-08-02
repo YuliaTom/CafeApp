@@ -92,7 +92,7 @@ CREATE TABLE order_items (
 );
 ```
 
-## 🪄 Usage
+## 👩‍💻 Usage
 
 Navigate through the application by choosing one of the options of te main menu:
 ```
