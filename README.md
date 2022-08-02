@@ -17,7 +17,7 @@ When a customer makes a new order, I need to create it on the system \
 I need to be able to update the status of an order \
 When I exit the app, I need all data to be persisted \
 When I start the app, I need to load all persisted data \
-I want to be sure the app has been tested & proven to work well \
+I want to be sure the app has been tested & proven to work well 
 
 ## 🛠 Installation
 
