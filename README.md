@@ -2,8 +2,11 @@
 
 ## 💡 About the project
 
-CafeApp is an application for a pop-up cafe that allows to create orders for customers. It stores data in  MySQL database. Users can perform CRUD operations on their data.
+CafeApp is an application for a pop-up cafe that allows to create orders for customers. It stores data in  MySQL database. Users can perform CRUD operations on their data that consists of customers, products, couriers and orders tables.
+Data can be imported from CSV file (where collunms correspond with the respective table columns) and exported from database to a CSV file.
 
+
+![screenshot](schema.png)
 
 ## 🎯 Goals
 
