@@ -36,7 +36,7 @@ Install the requirements:
 ```bash
 pip install -r requirements.txt
 ```
-Create Docker containers mysql_container and adminer_container
+Create Docker containers mysql_container and adminer_container:
 ```bash
 docker-compose up -d
 ```
@@ -48,7 +48,7 @@ docker-compose up -d
 3. Run SQL queries:
 
 ```sql
-CREATE DATABASE mini-project;
+CREATE DATABASE cafeDB;
 ```
 ```sql
 CREATE TABLE products (
@@ -94,7 +94,7 @@ CREATE TABLE order_items (
 
 ## 👩‍💻 Usage
 
-Navigate through the application by choosing one of the options of te main menu:
+Navigate through the application by choosing one of the options of the main menu:
 ```
 0 Exit
 1 Products
