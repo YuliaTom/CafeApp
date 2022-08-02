@@ -1,3 +1,10 @@
 test_menu.py
 mini-project-week-1.md
 .DS_Store
+__pycache__
+mini-project-week-5.md
+test-1.py
+test.ipynb
+.venv
+.env
+*.yml
