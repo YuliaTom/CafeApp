@@ -2,19 +2,22 @@
 
 ## 💡 About the project
 
-CafeApp is an application for a pop-up cafe that allows to create orders for customers. It stores data in  MySQL database. Users can perform CRUD operations on their data.
+CafeApp is an application for a pop-up cafe that allows to create orders for customers. It stores data in  MySQL database. Users can perform CRUD operations on their data that consists of customers, products, couriers and orders tables.
+Data can be imported from CSV file (where collunms correspond with the respective table columns) and exported from database to a CSV file.
 
+
+![screenshot](schema.png)
 
 ## 🎯 Goals
 
 As a business:
 
-I want to maintain a collection of products & couriers
-When a customer makes a new order, I need to create it on the system
-I need to be able to update the status of an order
-When I exit the app, I need all data to be persisted
-When I start the app, I need to load all persisted data
-I want to be sure the app has been tested & proven to work well
+I want to maintain a collection of products & couriers \
+When a customer makes a new order, I need to create it on the system \
+I need to be able to update the status of an order \
+When I exit the app, I need all data to be persisted \
+When I start the app, I need to load all persisted data \
+I want to be sure the app has been tested & proven to work well 
 
 ## 🛠 Installation
 
@@ -33,7 +36,7 @@ Install the requirements:
 ```bash
 pip install -r requirements.txt
 ```
-Create Docker containers mysql_container and adminer_container
+Create Docker containers mysql_container and adminer_container:
 ```bash
 docker-compose up -d
 ```
@@ -45,7 +48,7 @@ docker-compose up -d
 3. Run SQL queries:
 
 ```sql
-CREATE DATABASE mini-project;
+CREATE DATABASE cafeDB;
 ```
 ```sql
 CREATE TABLE products (
@@ -89,9 +92,9 @@ CREATE TABLE order_items (
 );
 ```
 
-## 🪄 Usage
+## 👩‍💻 Usage
 
-Navigate through the application by choosing one of the options of te main menu:
+Navigate through the application by choosing one of the options of the main menu:
 ```
 0 Exit
 1 Products
