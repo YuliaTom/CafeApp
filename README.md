@@ -14,6 +14,7 @@ As a business:
 
 I want to maintain a collection of products & couriers \
 When a customer makes a new order, I need to create it on the system \
+I need to be able to manage the stock \
 I need to be able to update the status of an order \
 When I exit the app, I need all data to be persisted \
 When I start the app, I need to load all persisted data \
